@@ -4,14 +4,33 @@ from PyQt5.QtGui import QIntValidator,QDoubleValidator,QFont
 from utils import convert_cv_qt
 from os import sep
 
-class MyGUI:
+import cv2
+import sys
+from PyQt5.QtWidgets import  QWidget, QLabel, QApplication
+from PyQt5.QtCore import QThread, Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QImage, QPixmap
 
-    def __init__(self, images = []):
-        self.IMAGE_FILES = images
-        self.window = QWidget()
-        self.window.setWindowTitle("Face detection")
+CAPTURE_DEVICE = cv2.VideoCapture(0)
+
+class Thread(QThread):
+    changePixmap = pyqtSignal(QPixmap)
+
+    def run(self):
+
+        
+        while True:
+            ret, frame = CAPTURE_DEVICE.read()
+            if ret and self.selected_input:
+                self.changePixmap.emit(convert_cv_qt(frame, 600, 600))
+            else:
+                img_BGR = cv2.imread(str(self.images[self.selected_image]), cv2.IMREAD_COLOR)
+                self.changePixmap.emit(convert_cv_qt(img_BGR, 600, 600))
 
 
+
+class MyGUI(QWidget):
+
+    def _init_layout(self):
         # LAYOUTS
         self.main_layout = QVBoxLayout()
         self.options_layout = QHBoxLayout()
@@ -54,25 +73,32 @@ class MyGUI:
         self.main_layout.addLayout(self.images_layout)
 
         # SETTING THE MAIN LAYOUT AS THE WINDOWS LAYOUT
-        self.window.setLayout(self.main_layout)
+        self.setLayout(self.main_layout)
 
+    def __init__(self, images = []):
+        super().__init__()
+        self.IMAGE_FILES = images
+        self.setWindowTitle("Face detection")
+        self._init_layout()
 
-    def get_main(self):
-        return self.window
+        self.selected_image_cb.currentIndexChanged.connect(self.select_image)
+        self.input_1.toggled.connect(self.select_input)
+        self.th = Thread(self)
+        self.th.images = images
+        self.th.selected_image = 0
+        self.th.selected_input = 0
+        self.th.changePixmap.connect(self.setImage)
+        self.th.start()
 
-    def add_method_selected_handler(self, handler):
-        self.method_1.toggled.connect(lambda:handler(self.method_1))
-        self.method_2.toggled.connect(lambda:handler(self.method_2))
+    def select_input(self):
+        if self.input_1.isChecked():
+            self.th.selected_input = 0
+        else:
+            self.th.selected_input = 1
 
-    def add_input_selected_handler(self, handler):
-        self.input_1.toggled.connect(lambda:handler(self.input_1))
-        self.input_2.toggled.connect(lambda:handler(self.input_2))
+    def select_image(self, index):
+        self.th.selected_image = index
 
-    def add_img_cb_handler(self, handler):
-        "handler(i)"
-        self.selected_image_cb.currentIndexChanged.connect(handler)
-
-    def update_img(self, cv_img):
-        """Updates the image with a new opencv image"""
-        qt_img = convert_cv_qt(cv_img, 600, 600)
-        self.img_label.setPixmap(qt_img)
+    @pyqtSlot(QPixmap)
+    def setImage(self, image):
+        self.img_label.setPixmap(image)

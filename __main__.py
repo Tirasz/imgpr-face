@@ -14,37 +14,11 @@ LAST_INDEX = 0
 # CAPTURE_DEVICE = cv2.VideoCapture(0)
 
 
-def update_image():
-    global LAST_INDEX, GUI, SELECTED_METHOD
-    img_BGR = cv2.imread(str(IMAGE_FILES[LAST_INDEX]), cv2.IMREAD_COLOR)
-    GUI.update_img(img_BGR)
-
-def img_select(i):
-    # called when select image cb changes
-    global LAST_INDEX
-    LAST_INDEX = i
-    update_image()
-
-def select_method(b):
-    global SELECTED_METHOD
-    if b.isChecked():
-        SELECTED_METHOD = b.text()
-        print(f"SELECTED METHOD: {SELECTED_METHOD}")
-        update_image()
-
-def select_input(b):
-    if b.isChecked():
-        print(f"{b.text()}")
 
 
-    
 
 if __name__ == "__main__":
     print(f"Loaded {len(IMAGE_FILES)} test images.")
-    update_image()
-    GUI.get_main().show()
-    GUI.add_img_cb_handler(img_select)
-    GUI.add_method_selected_handler(select_method)
-    GUI.add_input_selected_handler(select_input)
+    GUI.show()
 
 sys.exit(APP.exec_())
