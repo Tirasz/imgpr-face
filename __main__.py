@@ -10,6 +10,8 @@ APP = QApplication([])
 GUI = MyGUI(IMAGE_FILES)
 SELECTED_METHOD = "Method 1"
 LAST_INDEX = 0
+CAPTURE_DEVICE = cv2.VideoCapture(0)
+
 
 def update_image():
     global LAST_INDEX, GUI, SELECTED_METHOD
