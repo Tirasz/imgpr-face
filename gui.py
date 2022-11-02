@@ -16,15 +16,15 @@ class Thread(QThread):
     changePixmap = pyqtSignal(QPixmap)
 
     def run(self):
-
-        
+        self.refresh = True
         while True:
             ret, frame = CAPTURE_DEVICE.read()
             if ret and self.selected_input:
-                self.changePixmap.emit(convert_cv_qt(frame, 600, 600))
-            else:
-                img_BGR = cv2.imread(str(self.images[self.selected_image]), cv2.IMREAD_COLOR)
+                self.changePixmap.emit(convert_cv_qt(self.selected_method(frame), 600, 600))
+            elif self.refresh:
+                img_BGR = self.selected_method(cv2.imread(str(self.images[self.selected_image]), cv2.IMREAD_COLOR))
                 self.changePixmap.emit(convert_cv_qt(img_BGR, 600, 600))
+                self.refresh = False
 
 
 
@@ -83,12 +83,20 @@ class MyGUI(QWidget):
 
         self.selected_image_cb.currentIndexChanged.connect(self.select_image)
         self.input_1.toggled.connect(self.select_input)
+        self.method_1.toggled.connect(self.select_method)
         self.th = Thread(self)
         self.th.images = images
         self.th.selected_image = 0
         self.th.selected_input = 0
         self.th.changePixmap.connect(self.setImage)
         self.th.start()
+
+    def select_method(self):
+        self.th.refresh = True
+        if self.method_1.isChecked():
+            self.th.selected_method = self._method1
+        else:
+            self.th.selected_method = self._method2
 
     def select_input(self):
         if self.input_1.isChecked():
@@ -97,6 +105,7 @@ class MyGUI(QWidget):
             self.th.selected_input = 1
 
     def select_image(self, index):
+        self.th.refresh = True
         self.th.selected_image = index
 
     @pyqtSlot(QPixmap)
