@@ -1,4 +1,5 @@
 "# imgpr-face" 
 
-Test images taken from the CelebA dataset:
-http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
+Python version: 3.10.7  
+
+pip install requirements.txt
