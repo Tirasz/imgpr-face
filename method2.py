@@ -16,6 +16,15 @@ def getKernel(size):
         return size
     return size + 1
 
+def get_contour_areas(contours):
+    all_areas= []
+    for cnt in contours:
+        area= cv2.contourArea(cnt)
+        all_areas.append(area)
+
+    return all_areas
+
+
 def detectAndDisplay(img):
     rows, cols, channels = img.shape
 
@@ -65,9 +74,9 @@ def detectAndDisplay(img):
     # To compute texture amplitude, the intensity image was smoothed with a median filter of radius 4*SCALE. 
     # The result was subtracted from the original image.
     # The absolute values of these differences are then run through a second median filter of radius 6*SCALE. 
-    SMOOTH_I = medfilt2d(I, getKernel(SCALE*4))
-    DIFF = np.abs(I - SMOOTH_I)
-    TEXTURE = medfilt2d(DIFF, getKernel(SCALE*6))
+    #SMOOTH_I = medfilt2d(I, getKernel(SCALE*4))
+    #DIFF = np.abs(I - SMOOTH_I)
+    #TEXTURE = medfilt2d(DIFF, getKernel(SCALE*6))
 
 
     # For convenience, define the hue at a pixel to be atan(Rg,By), where Rg and By are the smoothed values computed as in the previous section.
@@ -81,11 +90,36 @@ def detectAndDisplay(img):
     # or (b) whose hue is between 130 and 170 and whose saturation is between 30 and 130.
     mask = np.zeros((rows, cols), dtype=np.uint8)
     
-    mask[(TEXTURE < 5) & (HUE > 110) & (HUE < 150) & (SAT > 20) & (SAT < 60)] = 255
-    mask[(TEXTURE < 5) & (HUE > 130) & (HUE < 170) & (SAT > 30) & (SAT < 130)] = 255
+    mask[ (HUE > 110) & (HUE < 150) & (SAT > 20) & (SAT < 60)] = 255
+    mask[ (HUE > 130) & (HUE < 170) & (SAT > 30) & (SAT < 130)] = 255
     # The skin regions are cleaned up and enlarged slightly, to accomodate possible desaturated regions adjacent to the marked regions.
     #  Specifically, a pixel is marked in the final map if at least one eighth of the pixels in a circular neighborhood of radius
     #  24*SCALE pixels are marked in the original map. This is done quickly (though only approximately) by slightly modifying the fast median filter.
-    mask = cv2.dilate(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (int(SCALE*12), int(SCALE*12))))
+    mask = cv2.dilate(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (int(SCALE*6), int(SCALE*6))))
+    
+    numLabels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, 4, cv2.CV_32S)
+    largest = 0
+    largestIndex = -1
+    # loop over the number of unique connected component labels
+    for i in range(0, numLabels):
+        # if this is the first component then we examine the
+        # *background* (typically we would just ignore this
+        # component in our loop)
+        if(i == 0):
+            continue
+        # extract the connected component area
+        area = stats[i, cv2.CC_STAT_AREA]
+        if(area > largest):
+            largest = area
+            largestIndex = i
+    i = largestIndex
+    x = stats[i, cv2.CC_STAT_LEFT]
+    y = stats[i, cv2.CC_STAT_TOP]
+    w = stats[i, cv2.CC_STAT_WIDTH]
+    h = stats[i, cv2.CC_STAT_HEIGHT]
+    (cX, cY) = centroids[i]
+    output = img.copy()
+    cv2.rectangle(output, (x, y), (x + w, y + h), (0, 255, 0), 3)
+    cv2.circle(output, (int(cX), int(cY)), 4, (0, 0, 255), -1)
 
-    return cv2.bitwise_and(img,img,mask = mask)
+    return output
